@@ -30,23 +30,26 @@ jobs:
       - name: Build Next.js Project
         run: npm run build
 
-      - name: Deploy to Raspberry Pi
-        env:
-          # 라즈베리파이 IP 주소
-          HOST: ${{ secrets.HOST }}
+      - name: Copy file via ssh password
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
+          source: "./.next"
+          target: ${{ secrets.TARGET }}
 
-          # 라즈베리파이 유저
-          USER: ${{ secrets.USER }}
-
-          # GitHub Secrets에 저장된 비공개 SSH 키
-          SSH_KEY: ${{ secrets.RASPBERRY_PI_KEY }}
-        run: |
-          echo "$SSH_KEY" > ssh_key.pem
-          chmod 600 ssh_key.pem
-          scp -o StrictHostKeyChecking=no -i ssh_key.pem -r . $USER@$HOST:/home/$USER/projects/github-actions-tutorial
-          ssh -o StrictHostKeyChecking=no -i ssh_key.pem $USER@$HOST << 'EOF'
-          cd
-          cd projects
-          npm install
-          pm2 kill
-          pm2 start --name FE npm -- run start
+      - name: Executing remote ssh commands using password
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
+          script: |
+            whoami
+            cd
+            cd projects/github-actions-tutorial
+            pm2 kill
+            pm2 start --name FE npm -- run start
