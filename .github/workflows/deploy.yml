@@ -1,0 +1,52 @@
+# workflow 이름 설정
+name: GitHub Actions로 CI/CD 구축 예시
+
+# workflow를 트리거하는 이벤트 설정
+on:
+  push:
+    # main 브랜치에 푸시할 때 실행
+    branches: ["main"]
+
+# 실행할 jobs 설정
+jobs:
+  # job 이름 설정
+  build-and-deploy:
+    # Ubuntu 환경에서 실행
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Node.js 버전 설정
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js Project
+        run: npm run build
+
+      - name: Deploy to Raspberry Pi
+        env:
+          # 라즈베리파이 IP 주소
+          HOST: ${{ secrets.HOST }}
+
+          # 라즈베리파이 유저
+          USER: ${{ secrets.USER }}
+
+          # GitHub Secrets에 저장된 비공개 SSH 키
+          SSH_KEY: ${{ secrets.RASPBERRY_PI_KEY }}
+        run: |
+          echo "$SSH_KEY" > ssh_key.pem
+          chmod 600 ssh_key.pem
+          scp -o StrictHostKeyChecking=no -i ssh_key.pem -r . $USER@$HOST:/home/$USER/projects/github-actions-tutorial
+          ssh -o StrictHostKeyChecking=no -i ssh_key.pem $USER@$HOST << 'EOF'
+          cd
+          cd projects
+          npm install
+          pm2 kill
+          pm2 start --name FE npm -- run start
