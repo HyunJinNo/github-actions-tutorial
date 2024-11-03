@@ -51,5 +51,6 @@ jobs:
             whoami
             cd
             cd projects/github-actions-tutorial
+            npm install
             pm2 kill
             pm2 start --name FE npm -- run start
